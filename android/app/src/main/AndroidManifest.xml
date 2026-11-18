@@ -3,7 +3,7 @@
     <application
         android:label="Event Buddy"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@drawable/event_buddy_logo">
         <activity
             android:name=".MainActivity"
             android:exported="true"
