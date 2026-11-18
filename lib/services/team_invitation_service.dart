@@ -42,7 +42,7 @@ class TeamInvitationService {
         actionCodeSettings: ActionCodeSettings(
           url: 'https://event-buddy-a5fbd.web.app/finishSignIn',
           handleCodeInApp: true,
-          androidPackageName: 'com.example.event_buddy',
+          androidPackageName: 'com.eventbuddy.app',
           androidInstallApp: true,
           androidMinimumVersion: '1',
           iOSBundleId: 'com.example.eventBuddy',

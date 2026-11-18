@@ -7,6 +7,42 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:169685400148:android:517067c88433968266cbc1",
+        "android_client_info": {
+          "package_name": "com.eventbuddy.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "169685400148-4e2hn61b6657agkj4c03g0gu01gcfh7n.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC6dGKSXYPrQMWs7z632jgA71ZkdehhFfE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "169685400148-4e2hn61b6657agkj4c03g0gu01gcfh7n.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "169685400148-qsq8gvpoj6vlkvf0j3s552s4ntoqk0sf.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.eventBuddy"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:169685400148:android:2a474197cc7c10d066cbc1",
         "android_client_info": {
           "package_name": "com.example.event_buddy"

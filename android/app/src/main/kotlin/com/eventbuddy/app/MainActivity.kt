@@ -1,4 +1,4 @@
-package com.example.event_buddy
+package com.eventbuddy.app
 
 import io.flutter.embedding.android.FlutterActivity
 

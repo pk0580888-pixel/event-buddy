@@ -79,7 +79,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyC6dGKSXYPrQMWs7z632jgA71ZkdehhFfE',
-    appId: '1:169685400148:android:2a474197cc7c10d066cbc1',
+    appId: '1:169685400148:android:517067c88433968266cbc1',
     messagingSenderId: '169685400148',
     projectId: 'event-buddy-a5fbd',
     storageBucket: 'event-buddy-a5fbd.firebasestorage.app',
