@@ -31,6 +31,8 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+/android/build/
+/Event_Buddy_source_*.zip
 /coverage/
 
 # Symbolication related
