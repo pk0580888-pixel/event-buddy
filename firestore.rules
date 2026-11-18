@@ -1,0 +1,160 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && (
+          request.auth.token.admin == true
+          || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'organizer']
+        );
+    }
+
+    function isPrimaryAdmin() {
+      return signedIn() && request.auth.token.admin == true;
+    }
+
+    function validEvent(data) {
+      return data.status in ['draft', 'published', 'cancelled']
+        && data.capacity is int
+        && data.capacity > 0
+        && data.startAt is timestamp
+        && data.endAt is timestamp
+        && data.endAt > data.startAt;
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn() && (request.auth.uid == userId || isAdmin());
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && (
+          request.resource.data.role == 'student'
+          || (
+            request.resource.data.role == 'organizer'
+            && request.resource.data.invitationId is string
+            && exists(/databases/$(database)/documents/team_invitations/$(request.resource.data.invitationId))
+            && get(/databases/$(database)/documents/team_invitations/$(request.resource.data.invitationId)).data.email == request.auth.token.email
+            && get(/databases/$(database)/documents/team_invitations/$(request.resource.data.invitationId)).data.status == 'pending'
+            && get(/databases/$(database)/documents/team_invitations/$(request.resource.data.invitationId)).data.expiresAt > request.time
+          )
+        );
+      allow update: if signedIn() && request.auth.uid == userId
+        && request.resource.data.role == resource.data.role;
+      allow update: if isPrimaryAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /events/{eventId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.status == 'published');
+      allow create, update: if isAdmin()
+        && request.resource.data.createdBy == request.auth.uid
+        && validEvent(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /registrations/{registrationId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.userId == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.eventId is string
+        && request.resource.data.status == 'confirmed';
+      allow update: if isAdmin();
+      allow delete: if isAdmin()
+        || (
+          signedIn()
+          && resource.data.userId == request.auth.uid
+          && get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.startAt > request.time
+        );
+    }
+
+    match /feedback/{feedbackId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.userId == request.auth.uid);
+      allow create, update: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.eventId is string
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5;
+      allow delete: if isAdmin();
+    }
+
+    match /scores/{scoreId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.userId == request.auth.uid);
+      allow create, update: if isAdmin()
+        && request.resource.data.userId is string
+        && request.resource.data.eventId is string
+        && request.resource.data.score is int
+        && request.resource.data.score >= 0
+        && request.resource.data.score <= 100;
+      allow delete: if isAdmin();
+    }
+
+    match /attendance/{attendanceId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isAdmin()
+        && request.resource.data.userId is string
+        && request.resource.data.eventId is string
+        && request.resource.data.registrationId is string
+        && request.resource.data.scannedBy == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    match /announcements/{announcementId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.isPublished == true);
+      allow create: if isAdmin()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.title is string
+        && request.resource.data.message is string
+        && request.resource.data.isPublished is bool;
+      allow update: if isAdmin()
+        && request.resource.data.title is string
+        && request.resource.data.message is string
+        && request.resource.data.isPublished is bool;
+      allow delete: if isAdmin();
+    }
+
+    match /team_invitations/{invitationId} {
+      allow read: if isAdmin()
+        || (
+          signedIn()
+          && resource.data.email == request.auth.token.email
+          && resource.data.status == 'pending'
+        );
+      allow create: if isPrimaryAdmin()
+        && request.resource.data.email is string
+        && request.resource.data.fullName is string
+        && request.resource.data.status == 'pending'
+        && request.resource.data.expiresAt is timestamp;
+      allow update: if isPrimaryAdmin()
+        || (
+          signedIn()
+          && resource.data.email == request.auth.token.email
+          && resource.data.status == 'pending'
+          && request.resource.data.status == 'accepted'
+          && request.resource.data.acceptedUid == request.auth.uid
+        );
+      allow delete: if isPrimaryAdmin();
+    }
+
+    match /certificate_templates/{templateId} {
+      allow read: if isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /certificates/{certificateId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.userId == request.auth.uid);
+      allow create, update, delete: if isAdmin();
+    }
+  }
+}
