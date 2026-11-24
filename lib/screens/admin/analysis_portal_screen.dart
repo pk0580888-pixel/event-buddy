@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/event_model.dart';
 import '../../models/feedback_model.dart';
@@ -259,6 +260,8 @@ class _AnalysisContentState extends State<_AnalysisContent> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(18, 0, 18, 30),
       children: [
+        _GoogleSheetPanel(event: widget.event),
+        const SizedBox(height: 12),
         Row(
           children: [
             _Metric(
@@ -419,6 +422,164 @@ class _AnalysisContentState extends State<_AnalysisContent> {
 
   String _initial(String value) =>
       value.trim().isEmpty ? '?' : value.trim().substring(0, 1).toUpperCase();
+}
+
+class _GoogleSheetPanel extends StatefulWidget {
+  const _GoogleSheetPanel({required this.event});
+  final EventModel event;
+
+  @override
+  State<_GoogleSheetPanel> createState() => _GoogleSheetPanelState();
+}
+
+class _GoogleSheetPanelState extends State<_GoogleSheetPanel> {
+  final _controller = TextEditingController();
+  bool _loaded = false;
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('event_score_sheets')
+          .doc(widget.event.id)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!_loaded && snapshot.hasData) {
+          _controller.text =
+              snapshot.data?.data()?['sheetUrl'] as String? ?? '';
+          _loaded = true;
+        }
+        final hasUrl = _isHttpsUrl(_controller.text);
+        return Card(
+          color: const Color(0xFFEFF5FF),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.table_chart_outlined, color: Color(0xFF3975FF)),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Online score sheet',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 5),
+                const Text(
+                  'Paste the Google Sheet link for this event. Organisers can give marks and feedback online while this portal keeps the event record connected.',
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _controller,
+                  keyboardType: TextInputType.url,
+                  textInputAction: TextInputAction.done,
+                  decoration: const InputDecoration(
+                    labelText: 'Google Sheet URL',
+                    hintText: 'https://docs.google.com/spreadsheets/d/...',
+                    prefixIcon: Icon(Icons.link),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    FilledButton.icon(
+                      onPressed: _saving ? null : _save,
+                      icon: _saving
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.save_outlined),
+                      label: const Text('Save link'),
+                    ),
+                    const SizedBox(width: 8),
+                    OutlinedButton.icon(
+                      onPressed: hasUrl ? _open : null,
+                      icon: const Icon(Icons.open_in_new),
+                      label: const Text('Open sheet'),
+                    ),
+                  ],
+                ),
+                if (_controller.text.trim().isNotEmpty && !hasUrl)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 6),
+                    child: Text(
+                      'Use a complete link beginning with https://',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _save() async {
+    final value = _controller.text.trim();
+    if (value.isNotEmpty && !_isHttpsUrl(value)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid https:// Google Sheet link.')),
+      );
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      await FirebaseFirestore.instance
+          .collection('event_score_sheets')
+          .doc(widget.event.id)
+          .set({
+            'eventId': widget.event.id,
+            'eventTitle': widget.event.title,
+            'sheetUrl': value,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Online score sheet link saved.')),
+        );
+      }
+    } on FirebaseException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message ?? 'Could not save the link.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _open() async {
+    final uri = Uri.parse(_controller.text.trim());
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication) && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open the online sheet.')),
+      );
+    }
+  }
+
+  bool _isHttpsUrl(String value) {
+    final uri = Uri.tryParse(value.trim());
+    return uri != null && uri.scheme == 'https' && uri.host.isNotEmpty;
+  }
 }
 
 class _AnalysisRow {

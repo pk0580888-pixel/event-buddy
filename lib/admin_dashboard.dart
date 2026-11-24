@@ -13,7 +13,6 @@ import 'screens/admin/participant_export_screen.dart';
 import 'screens/admin/certificate_management_screen.dart';
 import 'screens/admin/top_performers_screen.dart';
 import 'screens/admin/event_attendance_qr_screen.dart';
-import 'screens/admin/score_management_screen.dart';
 import 'screens/admin/attendance_scanner_screen.dart';
 import 'screens/admin/team_access_screen.dart';
 
@@ -276,18 +275,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 context,
                 MaterialPageRoute(
                   builder: (_) => const EventAttendanceQrScreen(),
-                ),
-              ),
-            ),
-
-            quickAction(
-              Icons.emoji_events_outlined,
-              'Assign Scores',
-              'Record participant event scores',
-              () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const ScoreManagementScreen(),
                 ),
               ),
             ),

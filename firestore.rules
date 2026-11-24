@@ -97,6 +97,10 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    match /event_score_sheets/{eventId} {
+      allow read, write: if isAdmin();
+    }
+
     match /attendance/{attendanceId} {
       allow read: if isAdmin()
         || (signedIn() && resource.data.userId == request.auth.uid);
