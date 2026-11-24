@@ -168,11 +168,63 @@ class _EventLeaderboard extends StatelessWidget {
   }
 }
 
-class _ParticipantsForEvent extends StatelessWidget {
+class _ParticipantsForEvent extends StatefulWidget {
   const _ParticipantsForEvent({required this.event, required this.onScore});
 
   final EventModel event;
   final Future<void> Function(BuildContext, RegistrationModel) onScore;
+
+  @override
+  State<_ParticipantsForEvent> createState() => _ParticipantsForEventState();
+}
+
+class _ParticipantsForEventState extends State<_ParticipantsForEvent> {
+  final _searchController = TextEditingController();
+  final _searchFocusNode = FocusNode();
+  String _search = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    setState(() => _search = '');
+    _searchFocusNode.requestFocus();
+  }
+
+  Widget _buildSearchField() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 0, 18, 10),
+      child: TextField(
+        controller: _searchController,
+        focusNode: _searchFocusNode,
+        textInputAction: TextInputAction.search,
+        onChanged: (value) => setState(() => _search = value),
+        onSubmitted: (_) => _searchFocusNode.requestFocus(),
+        decoration: InputDecoration(
+          labelText: 'Search participants',
+          hintText: 'Name, student ID, email, or score',
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: _search.trim().isEmpty
+              ? null
+              : IconButton(
+                  tooltip: 'Clear search',
+                  onPressed: _clearSearch,
+                  icon: const Icon(Icons.clear),
+                ),
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -197,7 +249,7 @@ class _ParticipantsForEvent extends StatelessWidget {
                 (registrationSnapshot.data ?? const <RegistrationModel>[])
                     .where(
                       (registration) =>
-                          registration.eventId == event.id &&
+                          registration.eventId == widget.event.id &&
                           registration.status == 'confirmed' &&
                           studentIds.contains(registration.userId),
                     )
@@ -207,29 +259,78 @@ class _ParticipantsForEvent extends StatelessWidget {
                 child: Text('No students registered for this event.'),
               );
             }
-            return ListView.separated(
-              padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
-              itemCount: registrations.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 10),
-              itemBuilder: (context, index) {
-                final registration = registrations[index];
-                final profile = profileById[registration.userId];
-                final name = profile?.fullName.isNotEmpty == true
-                    ? profile!.fullName
-                    : registration.participantName;
-                return Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.person_outline),
-                    title: Text(name),
-                    subtitle: Text(
-                      'Registration ID: ${registration.id}\nStudent ID: ${profile?.studentId ?? 'Not available'}',
+            return StreamBuilder<List<ScoreModel>>(
+              stream: ScoreService().watchScoresForEvent(widget.event.id),
+              builder: (context, scoreSnapshot) {
+                if (scoreSnapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final scoreByUser = {
+                  for (final score in scoreSnapshot.data ?? const <ScoreModel>[])
+                    score.userId: score,
+                };
+                final query = _search.trim().toLowerCase();
+                final filteredRegistrations = registrations.where((registration) {
+                  final profile = profileById[registration.userId];
+                  final score = scoreByUser[registration.userId];
+                  final searchable = [
+                    profile?.fullName ?? '',
+                    profile?.studentId ?? '',
+                    profile?.email ?? '',
+                    registration.participantName,
+                    registration.id,
+                    score?.score.toString() ?? '',
+                    score?.remarks ?? '',
+                  ].join(' ').toLowerCase();
+                  return query.isEmpty || searchable.contains(query);
+                }).toList();
+
+                return Column(
+                  children: [
+                    _buildSearchField(),
+                    Expanded(
+                      child: filteredRegistrations.isEmpty
+                          ? Center(
+                              child: Text(
+                                query.isEmpty
+                                    ? 'No students registered for this event.'
+                                    : 'No participants match your search.',
+                              ),
+                            )
+                          : ListView.separated(
+                              padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
+                              itemCount: filteredRegistrations.length,
+                              separatorBuilder: (_, _) => const SizedBox(height: 10),
+                              itemBuilder: (context, index) {
+                                final registration = filteredRegistrations[index];
+                                final profile = profileById[registration.userId];
+                                final score = scoreByUser[registration.userId];
+                                final name = profile?.fullName.isNotEmpty == true
+                                    ? profile!.fullName
+                                    : registration.participantName;
+                                final scoreText = score == null
+                                    ? 'Not assigned'
+                                    : '${score.score}/100';
+                                return Card(
+                                  child: ListTile(
+                                    leading: const Icon(Icons.person_outline),
+                                    title: Text(name),
+                                    subtitle: Text(
+                                      'Registration ID: ${registration.id}\n'
+                                      'Student ID: ${profile?.studentId ?? 'Not available'}\n'
+                                      'Score: $scoreText',
+                                    ),
+                                    isThreeLine: true,
+                                    trailing: FilledButton(
+                                      onPressed: () => widget.onScore(context, registration),
+                                      child: const Text('Score'),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                     ),
-                    isThreeLine: true,
-                    trailing: FilledButton(
-                      onPressed: () => onScore(context, registration),
-                      child: const Text('Score'),
-                    ),
-                  ),
+                  ],
                 );
               },
             );
