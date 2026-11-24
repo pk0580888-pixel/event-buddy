@@ -9,6 +9,7 @@ import '../../services/registration_service.dart';
 import '../../services/event_service.dart';
 import '../../services/score_service.dart';
 import '../../services/user_profile_service.dart';
+import 'analysis_portal_screen.dart';
 
 class ScoreManagementScreen extends StatefulWidget {
   const ScoreManagementScreen({super.key});
@@ -23,7 +24,19 @@ class _ScoreManagementScreenState extends State<ScoreManagementScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Participant scores')),
+      appBar: AppBar(
+        title: const Text('Participant scores'),
+        actions: [
+          IconButton(
+            tooltip: 'Open analysis portal',
+            icon: const Icon(Icons.table_chart_outlined),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AnalysisPortalScreen()),
+            ),
+          ),
+        ],
+      ),
       body: StreamBuilder<List<EventModel>>(
         stream: EventService().watchPublishedEvents(),
         builder: (context, snapshot) {

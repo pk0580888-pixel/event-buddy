@@ -6,6 +6,7 @@ import 'screens/admin/create_event_screen.dart';
 import 'screens/admin/event_list_screen.dart';
 import 'screens/admin/announcement_management_screen.dart';
 import 'screens/admin/analytics_screen.dart';
+import 'screens/admin/analysis_portal_screen.dart';
 import 'screens/admin/feedback_management_screen.dart';
 import 'screens/admin/participant_management_screen.dart';
 import 'screens/admin/participant_export_screen.dart';
@@ -288,6 +289,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 MaterialPageRoute(
                   builder: (_) => const ScoreManagementScreen(),
                 ),
+              ),
+            ),
+
+            quickAction(
+              Icons.table_chart_outlined,
+              'Analysis Portal',
+              'View attendance, scores, feedback, and event history in one live sheet',
+              () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AnalysisPortalScreen()),
               ),
             ),
 
